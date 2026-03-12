@@ -1,0 +1,43 @@
+### POST para insertar un nuevo servicioProfesional
+POST http://localhost:3001/serviciosProfesionales/insertarServicioProfesional
+Content-Type: application/json
+
+  {
+      "nombreServicio": "Limpieza dental",
+      "descripcionServicio": "Limpieza dental profesional con ultrasonido"
+  }
+
+
+### POST para actualizar un  servicioProfesional
+POST http://localhost:3001/serviciosProfesionales/actualizarServicioProfesional
+Content-Type: application/json
+
+{
+  "nombreServicio": "Limpieza dental profunda",
+  "descripcionServicio": "Limpieza dental profesional con ultrasonido y pulido",
+  "id_servicioProfesional": 1
+}
+
+### POST para seleccionar un  servicioProfesional
+POST http://localhost:3001/serviciosProfesionales/seleccionarServicioProfesional
+Content-Type: application/json
+
+{
+  "id_servicioProfesional": 1
+}
+
+
+
+### POST para eliminar un Profesional
+POST http://localhost:3001/serviciosProfesionales/eliminarServicioProfesional
+Content-Type: application/json
+
+{
+  "id_servicioProfesional": 1
+}
+
+
+
+### GET para seleccionara todos los Profesionales
+GET http://localhost:3001/serviciosProfesionales/seleccionarTodosServiciosProfesionales
+Content-Type: application/json

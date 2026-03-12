@@ -1,0 +1,53 @@
+### POST request to example server
+POST http://localhost:3001/odontograma/insertarOdontograma
+Content-Type: application/json
+
+{
+"id_paciente": 50,
+"teeth": {
+"18": {
+"surfaces": { "V": "caries", "L": null, "M": null, "D": "amalgama", "O": null },
+"wholeTooth": { "absent": false, "restoRadicular": false, "protesisFija": false, "prosthesisExisting":
+false }
+},
+"11": {
+"surfaces": { "V": null, "L": null, "M": "resina", "D": null, "O": "caries" },
+"wholeTooth": { "absent": false, "restoRadicular": false, "protesisFija": false, "prosthesisExisting":
+false }
+},
+"24": {
+"surfaces": { "V": null, "L": null, "M": null, "D": null, "O": null },
+"wholeTooth": { "absent": true, "restoRadicular": false, "protesisFija": false, "prosthesisExisting":
+false }
+},
+"36": {
+"surfaces": { "V": "amalgamaAntigua", "L": "resinaAntigua", "M": null, "D": null, "O":
+"amalgamaDefectuosa" },
+"wholeTooth": { "absent": false, "restoRadicular": true, "protesisFija": false, "prosthesisExisting":
+false }
+},
+"46": {
+"surfaces": { "V": null, "L": null, "M": null, "D": null, "O": null },
+"wholeTooth": { "absent": false, "restoRadicular": false, "protesisFija": true, "prosthesisExisting":
+false }
+},
+"85": {
+"surfaces": { "V": null, "L": null, "M": null, "D": null, "O": "resina" },
+"wholeTooth": { "absent": false, "restoRadicular": false, "protesisFija": false, "prosthesisExisting":
+true }
+}
+}
+}
+
+
+
+### POST request to example server
+POST http://localhost:3001/odontograma/seleccionarOdontogramaEspecifico
+Content-Type: application/json
+
+{
+  "id_paciente": 50
+}
+
+
+

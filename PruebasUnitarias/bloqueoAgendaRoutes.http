@@ -1,0 +1,60 @@
+### POST request to example server
+POST http://localhost:3001/bloqueoAgenda/InsertarBloqueo
+Content-Type: application/json
+
+{
+  "id_profesional": 2,
+  "fechaInicio": "2026-03-02",
+  "horaInicio": "13:00:00",
+  "fechaFinalizacion": "2026-03-02",
+  "horaFinalizacion": "14:00:00",
+  "motivo": "Almuerzo"
+}
+
+
+
+
+
+### POST request to example server
+POST http://localhost:3001/bloqueoAgenda/eliminarBloqueo
+Content-Type: application/json
+
+  {
+    "id_bloqueo": 1
+  }
+
+
+
+
+
+### POST request to example server
+POST http://localhost:3001/bloqueoAgenda/seleccionarBloqueosPorProfesional
+Content-Type: application/json
+
+  {
+    "id_profesional": 13
+  }
+
+
+
+
+
+
+
+### POST request to example server
+POST http://localhost:3001/bloqueoAgenda/seleccionarBloqueosEntreFechas
+Content-Type: application/json
+
+{
+  "fechaInicio": "2026-03-01",
+  "fechaFinalizacion": "2026-03-31"
+}
+
+
+
+### GET request to example server
+GET http://localhost:3001/bloqueoAgenda/seleccionarTodos
+
+
+
+

@@ -1,0 +1,17 @@
+### POST request to example server
+POST https://localhost:3001/reservaPacientes/insertarReservaPacienteFicha
+
+  {
+    "nombrePaciente": "Juan",
+    "apellidoPaciente": "Pérez",
+    "rut": "12345678-9",
+    "telefono": "+56912345678",
+    "email": "juan@correo.cl",
+    "fechaInicio": "2026-03-01",
+    "horaInicio": "10:00:00",
+    "fechaFinalizacion": "2026-03-01",
+    "horaFinalizacion": "11:00:00",
+    "estadoReserva": "reservada",
+    "id_profesional": 1
+  }
+

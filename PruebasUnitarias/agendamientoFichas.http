@@ -1,0 +1,63 @@
+### POST // FUNCION PARA INSERTAR NUEVA PORTADA
+POST http://localhost:3001/reservaPacientes/insertarReservaPacienteFicha
+Content-Type: application/json
+
+{
+  "nombrePaciente": "Francisca",
+  "apellidoPaciente": "Rojas",
+  "rut": "17234561-8",
+  "telefono": "+56917234561",
+  "email": "francisca.rojas@correo.cl",
+  "fechaInicio": "2026-03-02",
+  "horaInicio": "09:00:00",
+  "fechaFinalizacion": "2026-03-02",
+  "horaFinalizacion": "10:00:00",
+  "estadoReserva": "reservada",
+  "id_profesional": 4
+}
+
+
+
+
+
+
+
+### POST // FUNCION PARA INSERTAR NUEVA PORTADA
+POST http://localhost:3001/reservaPacientes/actualizarReservacion
+Content-Type: application/json
+
+{
+  "nombrePaciente": "Pedro",
+  "apellidoPaciente": "Vargas",
+  "rut": "12345338-8",
+  "telefono": "+56912345678",
+  "email": "pedro.nuevo@correo.cl",
+  "fechaInicio": "2026-03-02",
+  "horaInicio": "09:00:00",
+  "fechaFinalizacion": "2026-03-02",
+  "horaFinalizacion": "10:00:00",
+  "estadoReserva": "reservada",
+  "id_profesional": 1,
+  "id_reserva": 168
+}
+
+
+### GET // FUNCION PARA INSERTAR NUEVA PORTADA
+GET http://localhost:3001/reservaPacientes/seleccionarReservados
+
+
+
+### POST // FUNCION PARA INSERTAR NUEVA PORTADA
+POST http://localhost:3001/reservaPacientes/seleccionarPorProfesional
+Content-Type: application/json
+
+{
+  "id_profesional": 4
+}
+
+
+
+
+
+
+

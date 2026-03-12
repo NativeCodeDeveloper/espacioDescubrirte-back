@@ -1,0 +1,61 @@
+
+### POST para insertar una tarifaProfesional
+POST http://localhost:3001/tarifasProfesional/insertarTarifaProfesional
+Content-Type: application/json
+
+{
+  "profesional_id": 1,
+  "servicio_id": 1,
+  "precio": 25000,
+  "duracion_min": 30
+}
+
+
+### POST para seleccionar una tarifaProfesional por ID
+POST http://localhost:3001/tarifasProfesional/seleccionarTarifaProfesional
+Content-Type: application/json
+
+{
+  "id_tarifaProfesional": 18
+}
+
+
+### POST para seleccionar tarifas por profesional
+POST http://localhost:3001/tarifasProfesional/seleccionarTarifasPorProfesional
+Content-Type: application/json
+
+{
+  "profesional_id": 1
+}
+
+
+### POST para actualizar una tarifaProfesional
+POST http://localhost:3001/tarifasProfesional/actualizarTarifaProfesional
+Content-Type: application/json
+
+{
+  "profesional_id": 1,
+  "servicio_id": 1,
+  "precio": 30000,
+  "duracion_min": 45,
+  "id_tarifaProfesional": 1
+}
+
+
+### POST para eliminar una tarifaProfesional
+POST http://localhost:3001/tarifasProfesional/eliminarTarifaProfesional
+Content-Type: application/json
+
+{
+  "id_tarifaProfesional": 3
+}
+
+
+### GET para seleccionar todas las tarifasProfesional
+GET http://localhost:3001/tarifasProfesional/seleccionarTodasTarifasProfesionales
+Content-Type: application/json
+
+
+### GET para seleccionar todas las tarifasProfesional con nombres
+GET http://localhost:3001/tarifasProfesional/seleccionarTodasTarifasConNombres
+Content-Type: application/json

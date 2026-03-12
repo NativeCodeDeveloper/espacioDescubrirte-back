@@ -1,0 +1,49 @@
+### POST para insertar un nuevo Profesional
+POST http://localhost:3001/profesionales/insertarProfesional
+Content-Type: application/json
+
+  {
+      "nombreProfesional": "Dr. Juan Pérez",
+      "descripcionProfesional": "Especialista en ortodoncia"
+  }
+
+
+
+
+### POST para actualizar un  Profesional
+POST http://localhost:3001/profesionales/actualizarProfesional
+Content-Type: application/json
+
+{
+  "nombreProfesional": "Dr. Jack Shepard ",
+  "descripcionProfesional": "Especialista en Cirugía Oral",
+  "id_profesional": 3
+}
+
+
+
+### POST para seleccionar un  Profesional
+POST http://localhost:3001/profesionales/seleccionarProfesional
+Content-Type: application/json
+
+{
+  "id_profesional": 3
+}
+
+
+
+
+### POST para eliminar un Profesional
+POST http://localhost:3001/profesionales/eliminarProfesional
+Content-Type: application/json
+
+{
+  "id_profesional": 2
+}
+
+
+
+
+### GET para seleccionara todos los Profesionales
+GET http://localhost:3001/profesionales/seleccionarTodosProfesionales
+Content-Type: application/json
