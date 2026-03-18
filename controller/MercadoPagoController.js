@@ -23,17 +23,29 @@ export const createOrder = async (req, res) => {
             rut,
             telefono,
             email,
-            fechaInicio,
-            horaInicio,
-            fechaFinalizacion,
-            horaFinalizacion,
+            horasSeleccionadas,
             estadoReserva ,
             totalPago,
             id_profesional
         } = req.body;
 
-        if (!nombrePaciente || !apellidoPaciente || !rut || !telefono || !email || !fechaInicio || !horaInicio || !fechaFinalizacion || !horaFinalizacion || !id_profesional) {
+        if (!nombrePaciente || !apellidoPaciente || !rut || !telefono || !email || !id_profesional) {
             return res.status(400).json({ error: 'Faltan datos obligatorios para la reserva' });
+        }
+
+        if (!horasSeleccionadas || !Array.isArray(horasSeleccionadas) || horasSeleccionadas.length === 0) {
+            return res.status(400).json({ error: 'Debe seleccionar al menos una hora' });
+        }
+
+        if (horasSeleccionadas.length > 4) {
+            return res.status(400).json({ error: 'Máximo 4 horas por semana' });
+        }
+
+        // Validar que cada slot tenga los campos necesarios
+        for (const slot of horasSeleccionadas) {
+            if (!slot.fecha || !slot.horaInicio || !slot.horaFin) {
+                return res.status(400).json({ error: 'Cada hora seleccionada debe tener fecha, horaInicio y horaFin' });
+            }
         }
 
         if (!totalPago || Number(totalPago) <= 0) {
@@ -86,25 +98,33 @@ export const createOrder = async (req, res) => {
 
         const preference_id = resultBody.id;
 
-        // --- INSERTAR RESERVA CON ESTADO "pendiente pago" ---
+        // --- INSERTAR UNA RESERVA POR CADA SLOT CON MISMO preference_id ---
         try {
             const reservaPacienteClass = new ReservaPacientes();
             const estadoPeticion = 0;
-            const resultadoInsert = await reservaPacienteClass.insertarReservaPacienteBackend(
-                nombrePaciente, apellidoPaciente, rut, telefono, email,
-                fechaInicio, horaInicio, fechaFinalizacion, horaFinalizacion,
-                estadoReserva, preference_id,estadoPeticion,id_profesional
-            );
 
-            if (resultadoInsert && resultadoInsert.affectedRows > 0) {
-                console.log('Reserva insertada con estado "pendiente pago", preference_id:', preference_id);
+            let totalInserted = 0;
+            for (const slot of horasSeleccionadas) {
+                const resultadoInsert = await reservaPacienteClass.insertarReservaPacienteBackend(
+                    nombrePaciente, apellidoPaciente, rut, telefono, email,
+                    slot.fecha, slot.horaInicio, slot.fecha, slot.horaFin,
+                    estadoReserva, preference_id, estadoPeticion, id_profesional
+                );
+                if (resultadoInsert && resultadoInsert.affectedRows > 0) {
+                    totalInserted++;
+                }
+            }
+
+            if (totalInserted === horasSeleccionadas.length) {
+                console.log(`${totalInserted} reserva(s) insertada(s) con estado "pendiente pago", preference_id:`, preference_id);
                 return res.status(200).json({
                     id: resultBody.id,
                     init_point: resultBody.init_point,
                     sandbox_init_point: resultBody.sandbox_init_point,
                 });
             } else {
-                return res.status(500).json({ error: 'No se pudo insertar la reserva' });
+                console.error(`Solo se insertaron ${totalInserted}/${horasSeleccionadas.length} reservas`);
+                return res.status(500).json({ error: 'No se pudieron insertar todas las reservas' });
             }
         } catch (errReserva) {
             console.error('Error insertando reserva desde createOrder:', errReserva);
@@ -221,49 +241,55 @@ export const recibirPago = async (req, res) => {
                 const resultadoQuery = await reservaPacientesClass.cambiarReservaPagadaVisible(preference_id);
 
                 if (resultadoQuery && resultadoQuery.affectedRows > 0) {
-                    console.log("--------> RESERVA ACTUALIZADA A 'reservada' para preference_id:", preference_id);
+                    console.log("--------> RESERVA(S) ACTUALIZADA(S) A 'reservada' para preference_id:", preference_id);
 
-                    // Obtener datos de la reserva para enviar correos
+                    // Obtener TODAS las reservas asociadas a este preference_id
                     const dataCliente = await reservaPacientesClass.seleccionarFichasReservadasPreference(preference_id);
-                    const reserva = Array.isArray(dataCliente) && dataCliente.length > 0 ? dataCliente[0] : null;
+                    const reservas = Array.isArray(dataCliente) && dataCliente.length > 0 ? dataCliente : [];
 
-                    if (reserva) {
+                    if (reservas.length > 0) {
+                        const primera = reservas[0];
+
                         // --- INSERTAR PACIENTE ---
                         try {
                             const instanciaPacientes = new Pacientes();
                             await instanciaPacientes.insertPacientemp(
-                                reserva.nombrePaciente,
-                                reserva.apellidoPaciente,
-                                reserva.rut,
+                                primera.nombrePaciente,
+                                primera.apellidoPaciente,
+                                primera.rut,
                                 null,
                                 '---',
                                 0,
-                                reserva.telefono ?? 'NO INGRESADO',
-                                reserva.email ?? 'NO INGRESADO',
+                                primera.telefono ?? 'NO INGRESADO',
+                                primera.email ?? 'NO INGRESADO',
                                 '---',
                                 '---'
                             );
-                            console.log("Paciente insertado/verificado para:", reserva.rut);
+                            console.log("Paciente insertado/verificado para:", primera.rut);
                         } catch (errPaciente) {
                             console.error("Error insertando paciente:", errPaciente);
                         }
 
-                        // --- ENVIAR CORREO DE AGENDAMIENTO AL PACIENTE ---
+                        // Construir resumen combinado de todas las citas para el email
+                        const resumenFechas = reservas.map(r => `${r.fechaInicio} ${r.horaInicio}-${r.horaFinalizacion}`).join(' | ');
+                        const idsReservas = reservas.map(r => r.id_reserva).join(', ');
+
+                        // --- ENVIAR CORREO DE AGENDAMIENTO AL PACIENTE (con la primera reserva como base) ---
                         try {
                             await NotificacionAgendamiento.enviarCorreoConfirmacionReserva({
-                                to: reserva.email,
-                                nombrePaciente: reserva.nombrePaciente,
-                                apellidoPaciente: reserva.apellidoPaciente,
-                                rut: reserva.rut,
-                                telefono: reserva.telefono,
-                                fechaInicio: reserva.fechaInicio,
-                                horaInicio: reserva.horaInicio,
-                                fechaFinalizacion: reserva.fechaFinalizacion,
-                                horaFinalizacion: reserva.horaFinalizacion,
+                                to: primera.email,
+                                nombrePaciente: primera.nombrePaciente,
+                                apellidoPaciente: primera.apellidoPaciente,
+                                rut: primera.rut,
+                                telefono: primera.telefono,
+                                fechaInicio: reservas.length > 1 ? resumenFechas : primera.fechaInicio,
+                                horaInicio: reservas.length > 1 ? `${reservas.length} sesiones` : primera.horaInicio,
+                                fechaFinalizacion: reservas.length > 1 ? '' : primera.fechaFinalizacion,
+                                horaFinalizacion: reservas.length > 1 ? '' : primera.horaFinalizacion,
                                 estadoReserva: 'reservada',
-                                id_reserva: reserva.id_reserva
+                                id_reserva: primera.id_reserva
                             });
-                            console.log('Correo de agendamiento enviado al paciente:', reserva.email);
+                            console.log('Correo de agendamiento enviado al paciente:', primera.email, `(${reservas.length} cita(s))`);
                         } catch (errMailPaciente) {
                             console.error('Error enviando correo de agendamiento al paciente:', errMailPaciente);
                         }
@@ -271,14 +297,14 @@ export const recibirPago = async (req, res) => {
                         // --- NOTIFICAR AL EQUIPO ---
                         try {
                             await NotificacionAgendamiento.enviarCorreoConfirmacionEquipo({
-                                nombrePaciente: reserva.nombrePaciente,
-                                apellidoPaciente: reserva.apellidoPaciente,
-                                fechaInicio: reserva.fechaInicio,
-                                horaInicio: reserva.horaInicio,
+                                nombrePaciente: primera.nombrePaciente,
+                                apellidoPaciente: primera.apellidoPaciente,
+                                fechaInicio: reservas.length > 1 ? resumenFechas : primera.fechaInicio,
+                                horaInicio: reservas.length > 1 ? `${reservas.length} sesiones` : primera.horaInicio,
                                 accion: 'AGENDADA',
-                                id_reserva: reserva.id_reserva
+                                id_reserva: reservas.length > 1 ? idsReservas : primera.id_reserva
                             });
-                            console.log('Notificacion enviada al equipo para reserva:', reserva.id_reserva);
+                            console.log('Notificacion enviada al equipo para reserva(s):', idsReservas);
                         } catch (errMailEquipo) {
                             console.error('Error enviando notificacion al equipo:', errMailEquipo);
                         }
