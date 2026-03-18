@@ -37,10 +37,6 @@ export const createOrder = async (req, res) => {
             return res.status(400).json({ error: 'Debe seleccionar al menos una hora' });
         }
 
-        if (horasSeleccionadas.length > 4) {
-            return res.status(400).json({ error: 'Máximo 4 horas por semana' });
-        }
-
         // Validar que cada slot tenga los campos necesarios
         for (const slot of horasSeleccionadas) {
             if (!slot.fecha || !slot.horaInicio || !slot.horaFin) {
