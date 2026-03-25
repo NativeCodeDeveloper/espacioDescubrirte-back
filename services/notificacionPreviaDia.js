@@ -96,7 +96,7 @@ async function enviarCorreoRecordatorio({ email, nombrePaciente, apellidoPacient
           <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
             <b>⚠️ Importante:</b> Le solicitamos, por favor, no olvidar asistir a su cita en el horario indicado. 
             En caso de no poder concurrir, le agradeceremos avisar con anticipación para poder reprogramarla 
-            y así liberar el cupo para otro paciente.
+            y así liberar el cupo para otro usuario.
           </p>
         </div>
 

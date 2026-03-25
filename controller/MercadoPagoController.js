@@ -266,8 +266,11 @@ export const recibirPago = async (req, res) => {
                             console.error("Error insertando paciente:", errPaciente);
                         }
 
-                        // Construir resumen combinado de todas las citas para el email
-                        const resumenFechas = reservas.map(r => `${r.fechaInicio} ${r.horaInicio}-${r.horaFinalizacion}`).join(' | ');
+                        const sesionesCorreo = reservas.map(r => ({
+                            fechaInicio: r.fechaInicio,
+                            horaInicio: r.horaInicio,
+                            horaFinalizacion: r.horaFinalizacion
+                        }));
                         const idsReservas = reservas.map(r => r.id_reserva).join(', ');
 
                         // --- ENVIAR CORREO DE AGENDAMIENTO AL PACIENTE (con la primera reserva como base) ---
@@ -278,12 +281,13 @@ export const recibirPago = async (req, res) => {
                                 apellidoPaciente: primera.apellidoPaciente,
                                 rut: primera.rut,
                                 telefono: primera.telefono,
-                                fechaInicio: reservas.length > 1 ? resumenFechas : primera.fechaInicio,
-                                horaInicio: reservas.length > 1 ? `${reservas.length} sesiones` : primera.horaInicio,
+                                fechaInicio: primera.fechaInicio,
+                                horaInicio: primera.horaInicio,
                                 fechaFinalizacion: reservas.length > 1 ? '' : primera.fechaFinalizacion,
                                 horaFinalizacion: reservas.length > 1 ? '' : primera.horaFinalizacion,
                                 estadoReserva: 'reservada',
-                                id_reserva: primera.id_reserva
+                                id_reserva: primera.id_reserva,
+                                sesiones: reservas.length > 1 ? sesionesCorreo : []
                             });
                             console.log('Correo de agendamiento enviado al paciente:', primera.email, `(${reservas.length} cita(s))`);
                         } catch (errMailPaciente) {
@@ -295,10 +299,11 @@ export const recibirPago = async (req, res) => {
                             await NotificacionAgendamiento.enviarCorreoConfirmacionEquipo({
                                 nombrePaciente: primera.nombrePaciente,
                                 apellidoPaciente: primera.apellidoPaciente,
-                                fechaInicio: reservas.length > 1 ? resumenFechas : primera.fechaInicio,
-                                horaInicio: reservas.length > 1 ? `${reservas.length} sesiones` : primera.horaInicio,
+                                fechaInicio: primera.fechaInicio,
+                                horaInicio: primera.horaInicio,
                                 accion: 'AGENDADA',
-                                id_reserva: reservas.length > 1 ? idsReservas : primera.id_reserva
+                                id_reserva: reservas.length > 1 ? idsReservas : primera.id_reserva,
+                                sesiones: reservas.length > 1 ? sesionesCorreo : []
                             });
                             console.log('Notificacion enviada al equipo para reserva(s):', idsReservas);
                         } catch (errMailEquipo) {

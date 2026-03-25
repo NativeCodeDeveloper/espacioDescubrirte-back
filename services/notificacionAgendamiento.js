@@ -1,20 +1,66 @@
 export default class NotificacionAgendamiento {
-    static async enviarCorreoConfirmacionReserva({
-                                                     to,
-                                                     nombrePaciente,
-                                                     apellidoPaciente,
-                                                     rut,
-                                                     telefono,
-                                                     fechaInicio,
-                                                     horaInicio,
-                                                     fechaFinalizacion,
-                                                     horaFinalizacion,
-                                                     estadoReserva,
-                                                     id_reserva
-                                                 }) {
-        const { BREVO_API_KEY, CORREO_RECEPTOR, NOMBRE_EMPRESA, API_URL } = process.env;
+    static formatearFechaCorreo(fecha) {
+        if (!fecha) return "";
 
-        // No romper el flujo principal si falta configuración
+        const fechaObj = fecha instanceof Date ? fecha : new Date(fecha);
+        if (Number.isNaN(fechaObj.getTime())) {
+            return String(fecha);
+        }
+
+        return fechaObj.toLocaleDateString("es-CL", {
+            weekday: "short",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        });
+    }
+
+    static normalizarSesiones(sesiones = []) {
+        if (!Array.isArray(sesiones)) return [];
+
+        return sesiones.map((sesion) => ({
+            fecha: NotificacionAgendamiento.formatearFechaCorreo(sesion.fechaInicio),
+            horaInicio: sesion.horaInicio || "",
+            horaFinalizacion: sesion.horaFinalizacion || ""
+        }));
+    }
+
+    static construirDetalleSesionesTexto(sesiones = []) {
+        return sesiones
+            .map((sesion, index) => `${index + 1}. ${sesion.fecha} ${sesion.horaInicio}-${sesion.horaFinalizacion}`)
+            .join("\n");
+    }
+
+    static construirDetalleSesionesHtml(sesiones = []) {
+        return `
+          <table style="width: 100%; border-collapse: collapse;">
+            ${sesiones.map((sesion, index) => `
+              <tr>
+                <td style="padding: 6px 0; border-bottom: 1px solid #d1d5db; width: 32px;">${index + 1}.</td>
+                <td style="padding: 6px 0; border-bottom: 1px solid #d1d5db;">${sesion.fecha}</td>
+                <td style="padding: 6px 0; border-bottom: 1px solid #d1d5db; text-align: right;">${sesion.horaInicio}-${sesion.horaFinalizacion}</td>
+              </tr>
+            `).join("")}
+          </table>
+        `;
+    }
+
+    static async enviarCorreoConfirmacionReserva({
+        to,
+        nombrePaciente,
+        apellidoPaciente,
+        rut,
+        telefono,
+        fechaInicio,
+        horaInicio,
+        fechaFinalizacion,
+        horaFinalizacion,
+        estadoReserva,
+        id_reserva,
+        sesiones = []
+    }) {
+        const { BREVO_API_KEY, NOMBRE_EMPRESA } = process.env;
+
         if (!BREVO_API_KEY) {
             console.warn("[MAIL] BREVO_API_KEY no configurada. Correo no enviado.");
             return;
@@ -31,7 +77,6 @@ export default class NotificacionAgendamiento {
             return;
         }
 
-        // En Brevo, el 'from' debe ser un remitente verificado.
         const fromEmail = process.env.CORREO_REMITENTE || "desarrollo.native.code@gmail.com";
         const fromName = NOMBRE_EMPRESA || "Sistema de Agendamiento";
 
@@ -41,12 +86,17 @@ export default class NotificacionAgendamiento {
         }
 
         const subject = `Tu cita en ${fromName} ha sido registrada`;
-
-        // Construir URLs
-        const baseUrl = process.env.BACKEND_URL || "https://siluetachic.nativecode.cl";
-        const urlConfirmar = `${baseUrl}/notificacion/confirmar?id_reserva=${id_reserva}&nombrePaciente=${encodeURIComponent(nombrePaciente)}&apellidoPaciente=${encodeURIComponent(apellidoPaciente)}&fechaInicio=${encodeURIComponent(fechaInicio)}&horaInicio=${encodeURIComponent(horaInicio)}`;
-        const urlCancelar = `${baseUrl}/notificacion/cancelar?id_reserva=${id_reserva}&nombrePaciente=${encodeURIComponent(nombrePaciente)}&apellidoPaciente=${encodeURIComponent(apellidoPaciente)}&fechaInicio=${encodeURIComponent(fechaInicio)}&horaInicio=${encodeURIComponent(horaInicio)}`;
         const empresa = process.env.NOMBRE_EMPRESA || "Sistema de Agendamiento";
+        const baseUrl = process.env.BACKEND_URL || "https://siluetachic.nativecode.cl";
+        const sesionesNormalizadas = NotificacionAgendamiento.normalizarSesiones(sesiones);
+        const tieneMultiplesSesiones = sesionesNormalizadas.length > 1;
+        const fechaInicioFormateada = NotificacionAgendamiento.formatearFechaCorreo(fechaInicio);
+        const fechaFinalizacionFormateada = NotificacionAgendamiento.formatearFechaCorreo(fechaFinalizacion);
+        const detalleSesionesTexto = NotificacionAgendamiento.construirDetalleSesionesTexto(sesionesNormalizadas);
+        const detalleSesionesHtml = NotificacionAgendamiento.construirDetalleSesionesHtml(sesionesNormalizadas);
+
+        const urlConfirmar = `${baseUrl}/notificacion/confirmar?id_reserva=${id_reserva}&nombrePaciente=${encodeURIComponent(nombrePaciente)}&apellidoPaciente=${encodeURIComponent(apellidoPaciente)}&fechaInicio=${encodeURIComponent(fechaInicioFormateada)}&horaInicio=${encodeURIComponent(horaInicio)}`;
+        const urlCancelar = `${baseUrl}/notificacion/cancelar?id_reserva=${id_reserva}&nombrePaciente=${encodeURIComponent(nombrePaciente)}&apellidoPaciente=${encodeURIComponent(apellidoPaciente)}&fechaInicio=${encodeURIComponent(fechaInicioFormateada)}&horaInicio=${encodeURIComponent(horaInicio)}`;
 
         const text =
             `¡Tu cita en ${empresa} ha sido registrada! 🩺🏥\n\n` +
@@ -54,11 +104,15 @@ export default class NotificacionAgendamiento {
             `• Nombre: ${nombrePaciente} ${apellidoPaciente}\n` +
             `• RUT: ${rut}\n` +
             `• Teléfono: ${telefono}\n` +
-            `• Inicio: ${fechaInicio} ${horaInicio}\n` +
-            `• Término: ${fechaFinalizacion} ${horaFinalizacion}\n` +
+            (
+                tieneMultiplesSesiones
+                    ? `• Sesiones agendadas: ${sesionesNormalizadas.length}\n${detalleSesionesTexto}\n`
+                    : `• Inicio: ${fechaInicioFormateada} ${horaInicio}\n` +
+                      `• Término: ${fechaFinalizacionFormateada} ${horaFinalizacion}\n`
+            ) +
             `• Estado: ${estadoReserva}\n\n` +
             `Te recordamos confirmar tu cita a través de los enlaces de este correo.\n` +
-            `En caso de no poder asistir, te pedimos cancelarla con anticipación para poder reasignar ese horario a otro paciente.\n` +
+            `En caso de no poder asistir, te pedimos cancelarla con anticipación para poder reasignar ese horario a otro usuario.\n` +
             `¡Muchas gracias por tu colaboración! 🗓️\n\n` +
             `Saludos, ${empresa}.`;
 
@@ -75,8 +129,17 @@ export default class NotificacionAgendamiento {
           <table style="width: 100%; background: #f3f4f6; padding: 15px; border-radius: 8px; border-collapse: collapse;">
             <tr><td style="padding: 8px;"><b>RUT:</b></td><td style="padding: 8px;">${rut}</td></tr>
             <tr><td style="padding: 8px;"><b>Teléfono:</b></td><td style="padding: 8px;">${telefono}</td></tr>
-            <tr><td style="padding: 8px;"><b>Inicio:</b></td><td style="padding: 8px;">${fechaInicio} ${horaInicio}</td></tr>
-            <tr><td style="padding: 8px;"><b>Término:</b></td><td style="padding: 8px;">${fechaFinalizacion} ${horaFinalizacion}</td></tr>
+            ${tieneMultiplesSesiones
+                ? `
+            <tr>
+              <td style="padding: 8px; vertical-align: top;"><b>Sesiones:</b></td>
+              <td style="padding: 8px;">${detalleSesionesHtml}</td>
+            </tr>
+            `
+                : `
+            <tr><td style="padding: 8px;"><b>Inicio:</b></td><td style="padding: 8px;">${fechaInicioFormateada} ${horaInicio}</td></tr>
+            <tr><td style="padding: 8px;"><b>Término:</b></td><td style="padding: 8px;">${fechaFinalizacionFormateada} ${horaFinalizacion}</td></tr>
+            `}
             <tr><td style="padding: 8px;"><b>Estado:</b></td><td style="padding: 8px;">${estadoReserva}</td></tr>
           </table>
 
@@ -88,7 +151,7 @@ export default class NotificacionAgendamiento {
 
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;" />
           <p style="font-size: 13px; color: #6b7280;">
-            En caso de no poder asistir, te pedimos cancelar tu cita con anticipación para poder reasignar ese horario a otro paciente.
+            En caso de no poder asistir, te pedimos cancelar tu cita con anticipación para poder reasignar ese horario a otro usuario.
           </p>
         </div>
 
@@ -111,7 +174,6 @@ export default class NotificacionAgendamiento {
             htmlContent: html
         };
 
-        // Node 18+ trae fetch. Si tu runtime es más antiguo, actualiza Node.
         if (typeof fetch !== "function") {
             console.warn("[MAIL] Tu Node no tiene fetch (requiere Node 18+). Correo no enviado.");
             return;
@@ -138,15 +200,15 @@ export default class NotificacionAgendamiento {
         console.log("[MAIL] Enviado OK a:", to, "| id_reserva:", id_reserva);
     }
 
-    // Envía notificación al equipo cuando un paciente confirma, cancela o agenda una cita
     static async enviarCorreoConfirmacionEquipo({
-                                                    nombrePaciente,
-                                                    apellidoPaciente,
-                                                    fechaInicio,
-                                                    horaInicio,
-                                                    accion, // "CONFIRMADA", "CANCELADA" o "AGENDADA"
-                                                    id_reserva
-                                                }) {
+        nombrePaciente,
+        apellidoPaciente,
+        fechaInicio,
+        horaInicio,
+        accion,
+        id_reserva,
+        sesiones = []
+    }) {
         const { BREVO_API_KEY, NOMBRE_EMPRESA } = process.env;
 
         if (!BREVO_API_KEY) {
@@ -163,6 +225,11 @@ export default class NotificacionAgendamiento {
         }
 
         const destinatario = process.env.CORREO_RECEPTOR || "siluetachicestudio@gmail.com";
+        const sesionesNormalizadas = NotificacionAgendamiento.normalizarSesiones(sesiones);
+        const tieneMultiplesSesiones = sesionesNormalizadas.length > 1;
+        const fechaInicioFormateada = NotificacionAgendamiento.formatearFechaCorreo(fechaInicio);
+        const detalleSesionesTexto = NotificacionAgendamiento.construirDetalleSesionesTexto(sesionesNormalizadas);
+        const detalleSesionesHtml = NotificacionAgendamiento.construirDetalleSesionesHtml(sesionesNormalizadas);
 
         let subject, text, colorAccion, iconoAccion, textoAccion, detalleAccion;
 
@@ -175,8 +242,11 @@ export default class NotificacionAgendamiento {
                 detalleAccion = "El paciente confirmó su cita desde el enlace del correo.";
                 text = `El paciente ${nombrePaciente} ${apellidoPaciente} ha CONFIRMADO su cita.\n\n` +
                     `• ID Reserva: ${id_reserva}\n` +
-                    `• Fecha: ${fechaInicio}\n` +
-                    `• Hora: ${horaInicio}\n\n` +
+                    (
+                        tieneMultiplesSesiones
+                            ? `• Sesiones: ${sesionesNormalizadas.length}\n${detalleSesionesTexto}\n\n`
+                            : `• Fecha: ${fechaInicioFormateada}\n• Hora: ${horaInicio}\n\n`
+                    ) +
                     `${detalleAccion}`;
                 break;
 
@@ -184,12 +254,15 @@ export default class NotificacionAgendamiento {
                 subject = `🗓️ Nueva Reserva (Agenda Clínica) - ${nombrePaciente} ${apellidoPaciente}`;
                 textoAccion = "NUEVA RESERVA";
                 iconoAccion = "🗓️";
-                colorAccion = "#3b82f6"; // Azul para nueva reserva
+                colorAccion = "#3b82f6";
                 detalleAccion = "La reserva fue creada manualmente desde la agenda clínica.";
                 text = `Se ha creado una nueva reserva desde la agenda clínica para ${nombrePaciente} ${apellidoPaciente}.\n\n` +
                     `• ID Reserva: ${id_reserva}\n` +
-                    `• Fecha: ${fechaInicio}\n` +
-                    `• Hora: ${horaInicio}\n\n` +
+                    (
+                        tieneMultiplesSesiones
+                            ? `• Sesiones: ${sesionesNormalizadas.length}\n${detalleSesionesTexto}\n\n`
+                            : `• Fecha: ${fechaInicioFormateada}\n• Hora: ${horaInicio}\n\n`
+                    ) +
                     `${detalleAccion}`;
                 break;
 
@@ -202,8 +275,11 @@ export default class NotificacionAgendamiento {
                 detalleAccion = "El paciente canceló su cita desde el enlace del correo.";
                 text = `El paciente ${nombrePaciente} ${apellidoPaciente} ha CANCELADO su cita.\n\n` +
                     `• ID Reserva: ${id_reserva}\n` +
-                    `• Fecha: ${fechaInicio}\n` +
-                    `• Hora: ${horaInicio}\n\n` +
+                    (
+                        tieneMultiplesSesiones
+                            ? `• Sesiones: ${sesionesNormalizadas.length}\n${detalleSesionesTexto}\n\n`
+                            : `• Fecha: ${fechaInicioFormateada}\n• Hora: ${horaInicio}\n\n`
+                    ) +
                     `${detalleAccion}`;
                 break;
         }
@@ -216,8 +292,15 @@ export default class NotificacionAgendamiento {
         <div style="padding: 20px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
           <p><b>Paciente:</b> ${nombrePaciente} ${apellidoPaciente}</p>
           <p><b>ID Reserva:</b> ${id_reserva}</p>
-          <p><b>Fecha:</b> ${fechaInicio}</p>
+          ${tieneMultiplesSesiones
+            ? `
+          <p><b>Sesiones:</b></p>
+          ${detalleSesionesHtml}
+          `
+            : `
+          <p><b>Fecha:</b> ${fechaInicioFormateada}</p>
           <p><b>Hora:</b> ${horaInicio}</p>
+          `}
           <p><b>Acción:</b> ${detalleAccion}</p>
           <hr style="border: none; border-top: 1px solid #d1d5db; margin: 20px 0;" />
           <p style="font-size: 12px; color: #6b7280;">
