@@ -12,6 +12,7 @@ router.post("/actualizarEstado", ReservaPacienteController.actualizarEstado);
 router.post("/seleccionarNombre", ReservaPacienteController.buscarSimilitudNombre);
 router.post("/seleccionarRut", ReservaPacienteController.buscarSimilitudRut);
 router.post("/buscarEntreFechas", ReservaPacienteController.buscarEntreFechas);
+router.post("/resumenVentas", ReservaPacienteController.seleccionarResumenVentas);
 router.post("/eliminarReserva", ReservaPacienteController.eliminarReserva);
 router.post("/seleccionarEspecifica", ReservaPacienteController.seleccionarReservaEspecifica);
 router.post("/actualizarReservacion", ReservaPacienteController.actualizarInformacionReserva);

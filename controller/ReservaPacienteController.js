@@ -107,6 +107,30 @@ export default class ReservaPacienteController {
     }
 
 
+    static async seleccionarResumenVentas(req, res) {
+        try {
+            const {fechaInicio, fechaFinalizacion} = req.body ?? {};
+            console.log(fechaInicio, fechaFinalizacion);
+
+            if ((fechaInicio && !fechaFinalizacion) || (!fechaInicio && fechaFinalizacion)) {
+                return res.status(400).send({message: 'sindata'});
+            }
+
+            const claseReservaPaciente = new ReservaPacientes();
+            const resultadoQuery = await claseReservaPaciente.seleccionarResumenVentas(fechaInicio, fechaFinalizacion);
+
+            if (Array.isArray(resultadoQuery)) {
+                return res.status(200).json(resultadoQuery);
+            } else {
+                return res.status(400).send({message: 'sindata'});
+            }
+        } catch (error) {
+            console.log(error);
+            return res.status(400).send({message: error.message});
+        }
+    }
+
+
     static async buscarSimilitudRut(req, res) {
         try {
             const {rut} = req.body;

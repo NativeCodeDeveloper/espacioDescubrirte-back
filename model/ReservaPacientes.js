@@ -274,6 +274,62 @@ SELECT COUNT(*) AS cnt FROM (
     }
 
 
+    async seleccionarResumenVentas(fechaInicio, fechaFinalizacion) {
+        try {
+            const conexion = DataBase.getInstance();
+            let query = `
+                SELECT
+                    MIN(reservaPacientes.fechaInicio) AS fechaAgendadaReferencia,
+                    reservaPacientes.preference_id,
+                    reservaPacientes.nombrePaciente,
+                    reservaPacientes.apellidoPaciente,
+                    reservaPacientes.rut,
+                    reservaPacientes.email,
+                    reservaPacientes.telefono,
+                    COUNT(reservaPacientes.id_reserva) AS cantidadPagada,
+                    MAX(mercadoPago_logs.paid_amount) AS montoPagado,
+                    MAX(mercadoPago_logs.total_amount) AS montoTotal,
+                    MAX(mercadoPago_logs.order_status) AS estadoPago,
+                    MAX(mercadoPago_logs.numeroTransaccion_MercadoPago) AS numeroTransaccionMercadoPago
+                FROM reservaPacientes
+                INNER JOIN mercadoPago_logs
+                    ON mercadoPago_logs.preference_id = reservaPacientes.preference_id
+                WHERE reservaPacientes.estadoPeticion <> 0
+                    AND reservaPacientes.preference_id IS NOT NULL
+                    AND reservaPacientes.preference_id <> ''
+            `;
+
+            const params = [];
+
+            if (fechaInicio && fechaFinalizacion) {
+                query += ` AND reservaPacientes.fechaInicio BETWEEN ? AND ?`;
+                params.push(fechaInicio, fechaFinalizacion);
+            }
+
+            query += `
+                GROUP BY
+                    reservaPacientes.preference_id,
+                    reservaPacientes.nombrePaciente,
+                    reservaPacientes.apellidoPaciente,
+                    reservaPacientes.rut,
+                    reservaPacientes.email,
+                    reservaPacientes.telefono
+                ORDER BY MIN(reservaPacientes.fechaInicio) DESC
+            `;
+
+            const resultadoQuery = await conexion.ejecutarQuery(query, params);
+
+            if (resultadoQuery) {
+                return resultadoQuery;
+            }
+
+        } catch (error) {
+            console.log(error);
+            throw new Error(error);
+        }
+    }
+
+
     async actualizarEstado(estadoReserva, id_reserva) {
         try {
             const conexion = DataBase.getInstance();

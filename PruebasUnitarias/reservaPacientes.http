@@ -15,3 +15,11 @@ POST https://localhost:3001/reservaPacientes/insertarReservaPacienteFicha
     "id_profesional": 1
   }
 
+### Ajustado por ampliacion del CRUD: resumen de ventas por Mercado Pago
+POST http://localhost:3001/reservaPacientes/resumenVentas
+Content-Type: application/json
+
+{
+  "fechaInicio": "2026-03-01",
+  "fechaFinalizacion": "2026-03-31"
+}
